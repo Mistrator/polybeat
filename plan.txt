@@ -1,0 +1,47 @@
+-primitiivien piirto
+	-viiva -> n-kulmainen monikulmio DONE
+
+-kontrollit
+	-hiiren klikkaus objektin päällä DONE
+	-näppäimistön kuuntelu DONE
+
+-ääni:
+	-musiikin toisto DONE
+	-rytmin etsiminen DONE
+		-aubio: aubiotrack
+	-melodian etsiminen
+		-etsitään nuottien ajat aubioonset ja katsotaan nuotteja vastaavat taajuudet aubiopitch, muutos katsotaan edelliseen nuottiin
+	
+-keskellä monikulmio
+	-tavoite: pidä monikulmio olemassa koko biisin ajan ja kasvata sitä
+	-monikulmiosta irtoaa rytmin mukaan kappaleita, joita pitää klikkailla hiirellä takaisin DONE (osittain)
+	-irtoillessa monikulmio pienenee ja kappaleeseen osuessa palautuu (kappaleen pinta-alan verran) DONE
+	
+	-samalla seurataan näppäimistöllä biisin melodiaa, noustaessa asteikolla klikataan oikeanpuoleista näppäintä edellisestä
+	ja laskeutuessa vasemmanpuoleista
+	-jos painaa oikein, monikulmio kasvaa hieman
+	-jos painaa väärin, monikulmiosta lentää paljon pieniä palasia ja se pienenee palasten verran,
+	palasia voi yrittää klikkailla hiirellä takaisin, ääni vaimenee/häviää kunnes painaa oikein
+		-ehkä sivumäärä pienenee yhdellä?
+	
+	-monikulmion kasvaessa sen sivujen määrä kasvaa DONE
+		-alkaa kolmiosta DONE
+
+-pisteiden lasku, pisteet eivät vähenny biisin aikana
+	-näppäimistöllä ja hiirellä oikein klikatessa pisteitä
+	
+-efektit:
+	-objekteilla yleisväri spektristä, joka määräytyy biisin lead-äänenkorkeuden mukaan (matala fq -> punainen, korkea -> sininen)
+	-taustalla fraktaaleja? eri väri kuin yleis
+	-klikattaessa sirpaletta se kasvaa ja muuttuu samalla läpinäkyväksi
+	-kun klikkaa rytmisirpaletta, valkoinen välähdys?
+	-klikattaessa sirpaletta expanding ripple shader kohdalle
+	
+	-jos painaa näppäimistöllä väärin, ruutu tärähtää
+	
+	-jos biitti menee väärin, matalien taajuuksien äänenvoimakkuus laskee, melodialla taas korkeiden
+	
+-pelkkä lead-rytmin mukaan klikkailu
+-melodian nousu ja lasku onsetien mukaan
+-melodian nousu ja lasku vapaalla klikkailulla (tarkistus klikattaessa)
+-näppäimistö koskettimisto, eri sävelille oma nappi -> seurataan biisin säveliä näppiksellä
