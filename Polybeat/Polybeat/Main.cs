@@ -146,6 +146,10 @@ namespace Polybeat
         const float MIN_DIFFICULTY = 0.0f;
         const float MAX_DIFFICULTY = float.MaxValue;
 
+        const float SECONDS_TO_CLICK_ONSET = 0.3f;
+        const float ONSET_CLICK_MAX_SKILL_GAIN = 3.0f;
+        const float ONSET_MISS_SKILL_LOSE = 3.0f;
+
         /// <summary>
         /// Yleinen väri kaikille aktiivisille kappaleille.
         /// </summary>
@@ -215,22 +219,27 @@ namespace Polybeat
         void Begin()
         {
             SetWindowSize(1920, 1080);
-            // IsFullScreen = true;
+            IsFullScreen = true;
             IsMouseVisible = true;
             StartGame("");
         }
 
-        Polygon testPoly;
-
         void StartGame(string songName)
         {
+            Difficulty = 1.0f;
+
             SongManager.FindSongs();
-            SongManager.LoadSong(SongManager.Songs[4]);
+            SongManager.LoadSong(SongManager.Songs[0]);
             SongManager.CurrentSong.Play();
 
-            CreateCentralPolygon();
+            SongManager.CurrentSong.OnsetMissed += OnsetMissed;
 
-            testPoly = CreatePolygon(new Vector2(100.0f, WindowHeight / 2.0f), Vector2.Zero, 100.0f, 5, 3.0f, Color.Red);
+            CreateCentralPolygon();
+        }
+
+        void GameOver()
+        {
+            Exit();
         }
 
         /// <summary>
@@ -255,8 +264,11 @@ namespace Polybeat
                 Exit();
 
             MouseHandler.Update(gameTime);
+            KeyboardChange change = KeyboardHandler.UpdateState();
+            if (KeyboardHandler.IsKeyPressed(change))
+                KeyPressed();
 
-            return KeyboardHandler.UpdateState();
+            return change;
         }
 
         void SongUpdate(SongState state, KeyboardChange keyChange)
@@ -265,26 +277,42 @@ namespace Polybeat
             {
                 CreateShardPolygon(RandomGen.NextFloat(SPMinRadius, SPMaxRadius), RandomGen.NextFloat(SPMinSpeed, SPMaxSpeed));
             }
-            switch (state.Change)
-            {
-                case MelodyChange.None:
-                    break;
-                case MelodyChange.SameNote:
-                    // testPoly.Position += new Vector2(25.0f, 0.0f);
-                    break;
-                case MelodyChange.HigherNote:
-                    testPoly.Position += new Vector2(0.0f, -25.0f);
-                    break;
-                case MelodyChange.LowerNote:
-                    testPoly.Position += new Vector2(0.0f, 25.0f);
-                    break;
-                default:
-                    break;
-            }
+
             if (state.IsOnset)
             {
 
             }
+        }
+
+        void KeyPressed()
+        {
+            Tuple<float, int> timeToOnset = SongManager.CurrentSong.TimeToClosestOnset();
+
+            if (!SongManager.CurrentSong.IsClicked(timeToOnset.Item2))
+            {
+                if (timeToOnset.Item1 < SECONDS_TO_CLICK_ONSET)
+                {
+                    float successScaled = timeToOnset.Item1 / SECONDS_TO_CLICK_ONSET; // 0 täydellinen, 1 huonoin
+                    float successFactor = 1 - successScaled;
+
+                    Skill += ONSET_CLICK_MAX_SKILL_GAIN * successFactor * (1 / Difficulty);
+
+                    SongManager.CurrentSong.SetClicked(timeToOnset.Item2);
+                }
+                else
+                {
+                    OnsetMissed();
+                }
+            }
+            else
+            {
+                OnsetMissed();
+            }
+        }
+
+        void OnsetMissed()
+        {
+            Skill -= ONSET_MISS_SKILL_LOSE * Difficulty;
         }
 
         #endregion
@@ -331,6 +359,10 @@ namespace Polybeat
 
             CPMaxRadius = (WindowHeight / 2.0f) * 0.8f;
             SPMaxRadius = CPMaxRadius * 0.25f;
+
+            CentralPolygon.MinRadius = CPMinRadius;
+            CentralPolygon.MinRadiusReached += GameOver;
+
             skillChanged = true;
         }
 

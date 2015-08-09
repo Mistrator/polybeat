@@ -37,7 +37,7 @@ namespace Polybeat
         }
 
         private float[] beatMoments;
-        private float[] onsetMoments;
+        private Onset[] onsets;
 
         private float[] frequencyMoments;
         private float[] frequencies;
@@ -47,6 +47,10 @@ namespace Polybeat
         private int currentBeatIndex = 0;
         private int currentOnsetIndex = 0;
         private int currentFrequencyIndex = 0;
+
+        public int LastOnsetClicked = 0;
+
+        public event Action OnsetMissed;
 
         /// <summary>
         /// Kerroin puolisävelaskeleen muutokselle äänen taajuudessa.
@@ -103,11 +107,11 @@ namespace Polybeat
             string[] frequencyValues = File.ReadAllLines(frequencyPath);
 
             beatMoments = GetFloatValues(beatValues, 0);
-            onsetMoments = GetFloatValues(onsetValues, 0);
+            onsets = CreateOnsets(GetFloatValues(onsetValues, 0));
             frequencyMoments = GetFloatValues(frequencyValues, 0);
             frequencies = GetFloatValues(frequencyValues, 1);
 
-            GetFrequenciesForOnsets(frequencyMoments, frequencies, onsetMoments, 40.0f, 2000.0f);
+            GetFrequenciesForOnsets(frequencyMoments, frequencies, onsets, 40.0f, 2000.0f);
 
             // poistetaan piikkejä taajuuksista
             // SmoothenArray(frequencies, 20, 40.0f, 2000.0f);
@@ -153,6 +157,18 @@ namespace Polybeat
             }
 
             return destination;
+        }
+
+        private Onset[] CreateOnsets(float[] moments)
+        {
+            Onset[] onsets = new Onset[moments.Length];
+
+            for (int i = 0; i < moments.Length; i++)
+            {
+                onsets[i] = new Onset(moments[i], false);
+            }
+
+            return onsets;
         }
 
         /// <summary>
@@ -220,15 +236,15 @@ namespace Polybeat
             }
         }
 
-        private void GetFrequenciesForOnsets(float[] freqTimes, float[] frequencies, float[] onsetTimes, float lowCutoff, float highCutoff)
+        private void GetFrequenciesForOnsets(float[] freqTimes, float[] frequencies, Onset[] onsets, float lowCutoff, float highCutoff)
         {
-            onsetFrequencies = new float[onsetTimes.Length];
+            onsetFrequencies = new float[onsets.Length];
             int freqEndComplementIndex = 0;
 
-            for (int i = 0; i < onsetTimes.Length - 1; i++)
+            for (int i = 0; i < onsets.Length - 1; i++)
             {
-                float startTime = onsetTimes[i];
-                float endTime = onsetTimes[i + 1];
+                float startTime = onsets[i].Time;
+                float endTime = onsets[i + 1].Time;
 
                 int freqStartComplementIndex = Array.BinarySearch(freqTimes, startTime);
                 freqEndComplementIndex = Array.BinarySearch(freqTimes, endTime);
@@ -314,7 +330,7 @@ namespace Polybeat
         /// <returns></returns>
         public SongState Update()
         {
-            SongState state = new SongState(false, MelodyChange.None, false);
+            SongState state = new SongState(false, false);
 
             if (currentBeatIndex < beatMoments.Length)
             {
@@ -323,67 +339,57 @@ namespace Polybeat
                     currentBeatIndex++;
             }
 
-            if (currentOnsetIndex < onsetMoments.Length)
+            if (currentOnsetIndex < onsets.Length)
             {
-                bool newOnset = SecondsPlayed > onsetMoments[currentOnsetIndex]; 
+                state.IsOnset = SecondsPlayed > onsets[currentOnsetIndex].Time;
 
-                if (newOnset)
+                if (state.IsOnset)
                 {
-                    state.IsOnset = true;
-                    // currentOnsetIndex++;
-
-                    /*float frequencyOnPreviousOnset = frequencies[currentFrequencyIndex];
-
-                    int bComplementIndex = Array.BinarySearch(frequencyMoments, SecondsPlayed);
-                     
-                    if (bComplementIndex < 0)
+                    if (currentOnsetIndex > 0 && OnsetMissed != null)
                     {
-                        // ei suoraa osumaa, indeksi on seuraavaksi suuremman arvon indeksin bitwise complement 
-                        // (https://msdn.microsoft.com/en-us/library/2cy9f6wb.aspx)
-
-                        bComplementIndex = ~bComplementIndex; // ~ on bitwise complement -operaattori
+                        if (!onsets[currentOnsetIndex - 1].Clicked)
+                        {
+                            OnsetMissed();
+                            onsets[currentOnsetIndex - 1].Clicked = true; // ettei tule penaltya enemmän kuin kerran
+                        }
                     }
 
-                    currentFrequencyIndex = bComplementIndex;
+                }
 
-                    currentOnsetIndex++; // skipataan osa, sama binaryhaku tähän
-
-                    float currentFrequency = frequencies[currentFrequencyIndex];
-                    */
-
-                    // jos taajuus +- 1/4 sävelaskeleen sisällä edellisestä, sama nuotti uudestaan
-                    // jos yli 1/4, ylempi
-                    // jos alle 1/4, alempi
-
-                    float frequencyOnPreviousOnset;
-                    if (currentOnsetIndex - 1 >= 0)
-                        frequencyOnPreviousOnset = onsetFrequencies[currentOnsetIndex - 1];
-                    else frequencyOnPreviousOnset = 0;
-
-                    float currentFrequency = onsetFrequencies[currentOnsetIndex];
-
+                if (TimeToClosestOnset().Item2 > currentOnsetIndex)
+                {
                     currentOnsetIndex++;
-
-                    // ei ihan tarkka, mutta close enough i think
-                    float quarterStepDownChange = (frequencyOnPreviousOnset - (frequencyOnPreviousOnset / HALF_STEP_FREQUENCY_CHANGE));
-                    float quarterStepUpChange = ((frequencyOnPreviousOnset * HALF_STEP_FREQUENCY_CHANGE) - frequencyOnPreviousOnset);
-
-                    if (currentFrequency > frequencyOnPreviousOnset + quarterStepUpChange)
-                    {
-                        state.Change = MelodyChange.HigherNote;
-                        return state;
-                    }
-                    if (currentFrequency < frequencyOnPreviousOnset - quarterStepDownChange)
-                    {
-                        state.Change = MelodyChange.LowerNote;
-                        return state;
-                    }
-
-                    state.Change = MelodyChange.SameNote;
                 }
             }
 
             return state;
+        }
+
+        /// <summary>
+        /// Aika lähimpään onsetiin.
+        /// </summary>
+        /// <returns></returns>
+        public Tuple<float, int> TimeToClosestOnset()
+        {
+            int cOnsetIndex = currentOnsetIndex < onsets.Length ? currentOnsetIndex : onsets.Length - 1;
+
+            float current = SecondsPlayed - onsets[cOnsetIndex].Time;
+            float next = (cOnsetIndex + 1) < onsets.Length ? onsets[cOnsetIndex + 1].Time - SecondsPlayed : float.MaxValue;
+
+            if (current < next)
+                return new Tuple<float, int>(Math.Abs(current), cOnsetIndex);
+
+            return new Tuple<float, int>(Math.Abs(next), cOnsetIndex + 1);
+        }
+
+        public void SetClicked(int onsetIndex)
+        {
+            onsets[onsetIndex].Clicked = true;
+        }
+
+        public bool IsClicked(int onsetIndex)
+        {
+            return onsets[onsetIndex].Clicked;
         }
     }
 }

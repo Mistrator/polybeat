@@ -8,7 +8,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Polybeat
 {
-    public class Primitive : IDrawable
+    public class Primitive : IDrawable, IUpdatable
     {
         public PrimitiveType Type;
 
@@ -33,6 +33,8 @@ namespace Polybeat
                 return GetPosition();
             }
         }
+
+        public event Action Updated;
 
         public Primitive(PrimitiveType type, List<Vector2> vertices, Color color, float thickness)
 	    {
@@ -85,6 +87,12 @@ namespace Polybeat
                     batch.DrawLine(Vertices[0], Vertices[1], Color, Thickness);
                     break;
             }
+        }
+
+        public void Update(GameTime time)
+        {
+            if (Updated != null)
+                Updated();
         }
     }
 }

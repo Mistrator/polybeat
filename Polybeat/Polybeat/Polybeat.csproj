@@ -53,6 +53,7 @@
     <Compile Include="Data types\PrimitiveType.cs" />
     <Compile Include="Helpers\MathHelper.cs" />
     <Compile Include="MusicTools\MusicDataRetriever.cs" />
+    <Compile Include="Sound\Onset.cs" />
     <Compile Include="Sound\PolySong.cs" />
     <Compile Include="Sound\SongManager.cs" />
     <Compile Include="Sound\SongState.cs" />

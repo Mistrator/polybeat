@@ -102,8 +102,25 @@ namespace Polybeat
                 if (value <= 0)
                     throw new ArgumentOutOfRangeException("radius", "Radius must be greater than zero.");
 
+                if (value <= MinRadius)
+                {
+                    if (MinRadiusReached != null)
+                        MinRadiusReached();
+                }
+
                 radius = value;
                 verticesChanged = true;
+            }
+        }
+
+        private float minRadius;
+        public float MinRadius
+        {
+            get { return minRadius; }
+            set
+            {
+                if (value > 0)
+                    minRadius = value;
             }
         }
 
@@ -132,6 +149,7 @@ namespace Polybeat
         public event Action MouseRightClick;
 
         public event Action Updated;
+        public event Action MinRadiusReached;
 
         public Polygon(Vector2 position, int edgeCount, float radius, float edgeThickness, Color color)
         {

@@ -193,8 +193,36 @@ namespace Polybeat
                     return 21;
                 case Keys.Z:
                     return 0;
+                case Keys.Space:
+                    return 28;
                 default:
                     return -1;
+            }
+        }
+
+        /// <summary>
+        /// Onko jokin aktiivinen näppäin painettuna.
+        /// </summary>
+        /// <param name="change"></param>
+        /// <returns></returns>
+        public static bool IsKeyPressed(KeyboardChange change)
+        {
+            switch (change)
+            {
+                case KeyboardChange.Unchanged:
+                    return false;
+                case KeyboardChange.SamePressed:
+                    return true;
+                case KeyboardChange.Higher:
+                    return true;
+                case KeyboardChange.Lower:
+                    return true;
+                case KeyboardChange.BothHigherAndLower:
+                    return true;
+                case KeyboardChange.NonePressed:
+                    return false;
+                default:
+                    return false;
             }
         }
     }
